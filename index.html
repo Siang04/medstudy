@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>區段複習台</title>
+<style>
+:root{--ink:#16231f;--muted:#5f6b66;--rule:#dfe5e1;--past:#0f5c52;--bg:#f6f8f6;--card:#fff}
+@media(prefers-color-scheme:dark){:root{--ink:#e8efec;--muted:#9aa8a2;--rule:#2b3a35;--past:#3fb59f;--bg:#101614;--card:#18211e}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;padding:20px}
+.gate{width:100%;max-width:380px;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:28px 24px}
+h1{margin:0 0 6px;font-size:22px}p{margin:8px 0;color:var(--muted);font-size:14px}
+input[type=password]{width:100%;padding:13px 14px;font-size:16px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);margin-top:14px}
+label{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px;color:var(--muted)}
+button{width:100%;padding:13px;font-size:16px;border:0;border-radius:10px;background:var(--past);color:#fff;font-weight:600}
+button:disabled{opacity:.6}.msg{min-height:22px;margin-top:10px;font-size:14px}.err{color:#c0392b}
+.small{background:none;color:var(--muted);font-size:13px;text-decoration:underline;width:auto;padding:4px;margin-top:6px;font-weight:400}
+.note{font-size:12px;margin-top:18px;border-top:1px solid var(--rule);padding-top:12px}
+</style></head><body>
+<main class="gate">
+<h1>區段複習台</h1>
+<p>個人學習用的網站。內容已加密，輸入密碼後才會在你的瀏覽器裡解開。</p>
+<form id="f"><input id="pw" type="password" autocomplete="current-password" placeholder="密碼" required>
+<label><input type="checkbox" id="rem" checked> 記住這台裝置（下次不用再輸入）</label>
+<button id="go">解鎖</button></form>
+<div class="msg" id="msg"></div>
+<button class="small" id="forget" type="button" style="display:none">清除這台裝置的記住狀態</button>
+<p class="note">本站僅供個人學習、複習參考，不作其他用途。題目、圖片與講義內容的著作權屬原出題單位與授課老師；答案與詳解部分為整理或 AI 推論，請以官方公告與課堂內容為準。</p>
+</main>
+<script>
+const ITER=600000, SALT=Uint8Array.from(atob("M4twtVuZ5T1bBFJb5NQRYg=="),c=>c.charCodeAt(0));
+const $=id=>document.getElementById(id), dec=new TextDecoder();
+const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)), b64e=u=>btoa(String.fromCharCode(...u));
+const msg=(t,err)=>{$("msg").textContent=t;$("msg").className="msg"+(err?" err":"")};
+async function deriveKey(pw){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt:SALT,iterations:ITER,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["decrypt"]);
+}
+async function getBin(key,file){
+  const r=await fetch(file,{cache:"no-cache"}); if(!r.ok) throw new Error("fetch "+file);
+  const b=new Uint8Array(await r.arrayBuffer());
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},key,b.slice(12));
+}
+async function unlock(key){
+  let man; try{ man=JSON.parse(dec.decode(await getBin(key,"m.bin"))); }catch(e){ throw new Error("BADPW"); }
+  const ents=Object.entries(man.files), data={}, q=ents.slice(); let n=0;
+  await Promise.all(Array.from({length:6},async()=>{ while(q.length){ const [p,i]=q.shift(); data[p]=await getBin(key,i.f); msg("解密中… "+(++n)+" / "+ents.length); } }));
+  const imgUrl={}, imgs=[];
+  for(const [p,i] of ents) if(i.t==="img"){ imgUrl[p]=URL.createObjectURL(new Blob([data[p]],{type:i.m})); imgs.push(p); }
+  imgs.sort((a,b)=>b.length-a.length);
+  const patch=t=>{ for(const p of imgs) t=t.split(p).join(imgUrl[p]); return t; };
+  let html=dec.decode(data["index.html"]);
+  html=html.replace(/<script src="([^"]+)"><\/script>/g,(m,s)=>{
+    if(!data[s]) return m;
+    return '<script src="'+URL.createObjectURL(new Blob([patch(dec.decode(data[s]))],{type:"text/javascript"}))+'"><\/script>';
+  });
+  html=patch(html);
+  document.open(); document.write(html); document.close();
+}
+async function tryRemembered(){
+  const k=localStorage.getItem("ms_key"); if(!k) return false;
+  $("forget").style.display="inline-block";
+  try{ msg("自動解鎖中…"); await unlock(await crypto.subtle.importKey("raw",b64d(k),"AES-GCM",false,["decrypt"])); return true; }
+  catch(e){ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("這台裝置記住的金鑰已失效，請重新輸入密碼",true); return false; }
+}
+$("forget").onclick=()=>{ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("已清除"); };
+$("f").onsubmit=async e=>{
+  e.preventDefault(); $("go").disabled=true; msg("驗證密碼中…（手機可能要幾秒）");
+  try{
+    const key=await deriveKey($("pw").value);
+    if($("rem").checked){ localStorage.setItem("ms_key",b64e(new Uint8Array(await crypto.subtle.exportKey("raw",key)))); }
+    await unlock(key);
+  }catch(err){
+    localStorage.removeItem("ms_key"); $("go").disabled=false;
+    msg(err.message==="BADPW"?"密碼不對":"載入失敗："+err.message,true);
+  }
+};
+if(!window.crypto||!crypto.subtle){ msg("這個瀏覽器不支援解密（需要 https 或較新的瀏覽器）",true); $("go").disabled=true; }
+else tryRemembered();
+</script></body></html>
