@@ -10,7 +10,10 @@
 background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;padding:20px}
 .gate{width:100%;max-width:380px;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:28px 24px}
 h1{margin:0 0 6px;font-size:22px}p{margin:8px 0;color:var(--muted);font-size:14px}
-input[type=password]{width:100%;padding:13px 14px;font-size:16px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);margin-top:14px}
+.acct{margin-top:6px;border-top:1px solid var(--rule)}.tabs{display:flex;gap:6px;margin:6px 0 0}
+.tab{width:auto;flex:1;padding:8px;font-size:14px;background:transparent;color:var(--muted);border:1px solid var(--rule);font-weight:400}
+.tab.on{background:var(--past);color:#fff;border-color:var(--past)}
+input[type=password],input[type=email]{width:100%;padding:13px 14px;font-size:16px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);margin-top:14px}
 label{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px;color:var(--muted)}
 button{width:100%;padding:13px;font-size:16px;border:0;border-radius:10px;background:var(--past);color:#fff;font-weight:600}
 button:disabled{opacity:.6}.msg{min-height:22px;margin-top:10px;font-size:14px}.err{color:#c0392b}
@@ -20,7 +23,12 @@ button:disabled{opacity:.6}.msg{min-height:22px;margin-top:10px;font-size:14px}.
 <main class="gate">
 <h1>區段複習台</h1>
 <p>個人學習用的網站。內容已加密，輸入密碼後才會在你的瀏覽器裡解開。</p>
-<form id="f"><input id="pw" type="password" autocomplete="current-password" placeholder="密碼" required>
+<form id="f"><input id="pw" type="password" autocomplete="off" placeholder="網站密碼" required>
+<div class="acct"><p style="margin:14px 0 4px"><b>我的帳號</b>（選用：同步星星與答題紀錄，換裝置也在）</p>
+<div class="tabs"><button type="button" id="tl" class="tab on">登入</button><button type="button" id="tr" class="tab">註冊新帳號</button></div>
+<input id="em" type="email" autocomplete="email" placeholder="信箱（不用帳號就留空）">
+<input id="apw" type="password" autocomplete="current-password" placeholder="帳號密碼（註冊時自己設，至少 6 個字元）">
+<button type="button" id="rs" class="small">忘記帳號密碼？寄重設信到上面的信箱</button></div>
 <label><input type="checkbox" id="rem" checked> 記住這台裝置（下次不用再輸入）</label>
 <button id="go">解鎖</button></form>
 <div class="msg" id="msg"></div>
@@ -64,10 +72,30 @@ async function tryRemembered(){
   catch(e){ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("這台裝置記住的金鑰已失效，請重新輸入密碼",true); return false; }
 }
 $("forget").onclick=()=>{ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("已清除"); };
+/* 帳號（選用）：用 Firebase REST 登入／註冊，登入資料存在這個網站自己的 localStorage（medstudyAuth），解鎖後網站會自動接手同步 */
+const FBK="AIzaSyAvhAKfpmy5h1Hnk8E9ej-nSvedoA-Ql-U"; let amode="login";
+const ERR={EMAIL_EXISTS:"這個信箱已經註冊過了，請改用「登入」",INVALID_LOGIN_CREDENTIALS:"帳號信箱或帳號密碼不正確",INVALID_PASSWORD:"帳號信箱或帳號密碼不正確",
+ EMAIL_NOT_FOUND:"找不到這個信箱，請先註冊",WEAK_PASSWORD:"帳號密碼太短，至少 6 個字元",INVALID_EMAIL:"信箱格式不正確",MISSING_PASSWORD:"請輸入帳號密碼",
+ TOO_MANY_ATTEMPTS_TRY_LATER:"嘗試次數太多，請稍後再試"};
+const fbmsg=m=>{ const k=Object.keys(ERR).find(c=>String(m).includes(c)); return k?ERR[k]:(/Failed to fetch|Network/i.test(m)?"連不上網路，帳號功能需要網路":"帳號錯誤："+m); };
+async function fb(path,body){ const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:"+path+"?key="+FBK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||("HTTP "+r.status)); return j; }
+$("tl").onclick=()=>{ amode="login"; $("tl").className="tab on"; $("tr").className="tab"; };
+$("tr").onclick=()=>{ amode="register"; $("tr").className="tab on"; $("tl").className="tab"; };
+$("rs").onclick=async()=>{ const em=$("em").value.trim(); if(!em){ msg("請先在上面填信箱",true); return; }
+  try{ await fb("sendOobCode",{requestType:"PASSWORD_RESET",email:em}); msg("已寄出重設密碼的信到 "+em+"（沒看到請查垃圾信件匣）"); }catch(e){ msg(fbmsg(e.message),true); } };
+async function accountLogin(){
+  const em=$("em").value.trim(); if(!em) return;
+  const pw=$("apw").value; if(!pw) throw new Error("MISSING_PASSWORD");
+  const r=await fb(amode==="register"?"signUp":"signInWithPassword",{email:em,password:pw,returnSecureToken:true});
+  localStorage.setItem("medstudyAuth",JSON.stringify({email:em,uid:r.localId,idToken:r.idToken,refreshToken:r.refreshToken,exp:Date.now()+(+r.expiresIn)*1000-60000}));
+}
 $("f").onsubmit=async e=>{
   e.preventDefault(); $("go").disabled=true; msg("驗證密碼中…（手機可能要幾秒）");
   try{
     const key=await deriveKey($("pw").value);
+    try{ await getBin(key,"m.bin"); }catch(x){ throw new Error("BADPW"); }
+    try{ await accountLogin(); }catch(x){ $("go").disabled=false; msg(fbmsg(x.message),true); return; }
     if($("rem").checked){ localStorage.setItem("ms_key",b64e(new Uint8Array(await crypto.subtle.exportKey("raw",key)))); }
     await unlock(key);
   }catch(err){
