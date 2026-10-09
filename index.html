@@ -40,7 +40,7 @@ h1{margin:0 0 4px;font-size:23px;letter-spacing:.5px}
 <h1>區段複習台</h1>
 <p class="sub">輸入網站密碼解鎖。內容已加密，只會在你的瀏覽器裡解開。</p>
 <form id="f" autocomplete="off">
-<div class="sec"><label class="lbl" for="pw">網站密碼</label>
+<div class="sec" id="pwsec"><label class="lbl" for="pw">網站密碼</label>
 <input class="fld" id="pw" type="password" autocomplete="off" placeholder="朋友給你的網站密碼" required></div>
 <div class="acct">
 <label class="lbl">我的帳號<span style="font-weight:400">（同步星星與答題紀錄，換裝置也在）</span></label>
@@ -50,7 +50,7 @@ h1{margin:0 0 4px;font-size:23px;letter-spacing:.5px}
 <input class="fld" id="apw" type="password" autocomplete="current-password" placeholder="帳號密碼（至少 6 個字）">
 <div class="row"><span></span><button type="button" id="rs" class="lnk">忘記帳號密碼？</button></div>
 </div></div>
-<label class="chk"><input type="checkbox" id="rem" checked> 記住這台裝置，下次直接進入</label>
+<label class="chk"><input type="checkbox" id="rem" checked> 記住我的密碼與帳號（這台裝置下次自動進入、自動登入）</label>
 <button id="go">解鎖</button>
 </form>
 <div class="bar" id="bar"><i id="bari"></i></div>
@@ -91,12 +91,16 @@ async function unlock(key){
 async function tryRemembered(){
   const k=localStorage.getItem("ms_key"); if(!k) return false;
   $("forget").classList.remove("hide");
+  /* 這台裝置已記住網站密碼，但還沒登入帳號、也沒選過「先不用」→ 停在這頁讓使用者選，不要一閃就進去 */
+  if(!localStorage.getItem("medstudyAuth")&&localStorage.getItem("ms_mode")!=="none"){
+    REM=k; $("pwsec").classList.add("hide"); $("pw").required=false; $("go").textContent="進入";
+    msg("這台裝置已記住網站密碼。登入帳號就能同步；不想登入請選「先不用」再按進入。"); return false; }
   try{ msg("自動解鎖中…"); await unlock(await crypto.subtle.importKey("raw",b64d(k),"AES-GCM",false,["decrypt"])); return true; }
   catch(e){ localStorage.removeItem("ms_key"); $("forget").classList.add("hide"); msg("這台裝置記住的金鑰已失效，請重新輸入密碼",true); return false; }
 }
 $("forget").onclick=()=>{ localStorage.removeItem("ms_key"); $("forget").classList.add("hide"); msg("已清除"); };
 /* 帳號（選用）：用 Firebase REST 登入／註冊，登入資料存在這個網站自己的 localStorage（medstudyAuth），解鎖後網站會自動接手同步 */
-const FBK="AIzaSyAvhAKfpmy5h1Hnk8E9ej-nSvedoA-Ql-U"; let amode="login";
+let REM=null; const FBK="AIzaSyAvhAKfpmy5h1Hnk8E9ej-nSvedoA-Ql-U"; let amode="login";
 const ERR={EMAIL_EXISTS:"這個信箱已經註冊過了，請改用「登入」",INVALID_LOGIN_CREDENTIALS:"帳號信箱或帳號密碼不正確",INVALID_PASSWORD:"帳號信箱或帳號密碼不正確",
  EMAIL_NOT_FOUND:"找不到這個信箱，請先註冊",WEAK_PASSWORD:"帳號密碼太短，至少 6 個字元",INVALID_EMAIL:"信箱格式不正確",MISSING_PASSWORD:"請輸入帳號密碼",
  TOO_MANY_ATTEMPTS_TRY_LATER:"嘗試次數太多，請稍後再試"};
@@ -108,6 +112,7 @@ const setMode=m=>{ amode=m; try{localStorage.setItem("ms_mode",m);}catch(e){}
   $("acf").className=m==="none"?"hide":""; $("em").required=m!=="none"; $("apw").required=m!=="none";
   $("apw").autocomplete=m==="register"?"new-password":"current-password"; $("rs").className="lnk"+(m==="login"?"":" hide"); };
 document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+try{ $("em").value=localStorage.getItem("ms_email")||""; }catch(e){}
 setMode(localStorage.getItem("medstudyAuth")?"none":(localStorage.getItem("ms_mode")||"login"));
 $("rs").onclick=async()=>{ const em=$("em").value.trim(); if(!em){ msg("請先在上面填信箱",true); return; }
   try{ await fb("sendOobCode",{requestType:"PASSWORD_RESET",email:em}); msg("已寄出重設密碼的信到 "+em+"（沒看到請查垃圾信件匣）"); }catch(e){ msg(fbmsg(e.message),true); } };
@@ -116,12 +121,13 @@ async function accountLogin(){
   const em=$("em").value.trim(); if(!em) throw new Error("INVALID_EMAIL");
   const pw=$("apw").value; if(!pw) throw new Error("MISSING_PASSWORD");
   const r=await fb(amode==="register"?"signUp":"signInWithPassword",{email:em,password:pw,returnSecureToken:true});
+  if($("rem").checked) localStorage.setItem("ms_email",em);
   localStorage.setItem("medstudyAuth",JSON.stringify({email:em,uid:r.localId,idToken:r.idToken,refreshToken:r.refreshToken,exp:Date.now()+(+r.expiresIn)*1000-60000}));
 }
 $("f").onsubmit=async e=>{
   e.preventDefault(); $("go").disabled=true; msg("驗證密碼中…（手機可能要幾秒）");
   try{
-    const key=await deriveKey($("pw").value);
+    const key=(!$("pw").value&&REM)?await crypto.subtle.importKey("raw",b64d(REM),"AES-GCM",true,["decrypt"]):await deriveKey($("pw").value);
     try{ await getBin(key,"m.bin"); }catch(x){ throw new Error("BADPW"); }
     try{ await accountLogin(); }catch(x){ $("go").disabled=false; msg(fbmsg(x.message),true); return; }
     if($("rem").checked){ localStorage.setItem("ms_key",b64e(new Uint8Array(await crypto.subtle.exportKey("raw",key)))); }
