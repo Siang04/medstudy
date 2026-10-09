@@ -4,36 +4,59 @@
 <meta name="robots" content="noindex,nofollow">
 <title>區段複習台</title>
 <style>
-:root{--ink:#16231f;--muted:#5f6b66;--rule:#dfe5e1;--past:#0f5c52;--bg:#f6f8f6;--card:#fff}
-@media(prefers-color-scheme:dark){:root{--ink:#e8efec;--muted:#9aa8a2;--rule:#2b3a35;--past:#3fb59f;--bg:#101614;--card:#18211e}}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;padding:20px}
-.gate{width:100%;max-width:380px;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:28px 24px}
-h1{margin:0 0 6px;font-size:22px}p{margin:8px 0;color:var(--muted);font-size:14px}
-.acct{margin-top:6px;border-top:1px solid var(--rule)}.tabs{display:flex;gap:6px;margin:6px 0 0}
-.tab{width:auto;flex:1;padding:8px;font-size:14px;background:transparent;color:var(--muted);border:1px solid var(--rule);font-weight:400}
-.tab.on{background:var(--past);color:#fff;border-color:var(--past)}
-input[type=password],input[type=email]{width:100%;padding:13px 14px;font-size:16px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);margin-top:14px}
-label{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px;color:var(--muted)}
-button{width:100%;padding:13px;font-size:16px;border:0;border-radius:10px;background:var(--past);color:#fff;font-weight:600}
-button:disabled{opacity:.6}.msg{min-height:22px;margin-top:10px;font-size:14px}.err{color:#c0392b}
-.small{background:none;color:var(--muted);font-size:13px;text-decoration:underline;width:auto;padding:4px;margin-top:6px;font-weight:400}
-.note{font-size:12px;margin-top:18px;border-top:1px solid var(--rule);padding-top:12px}
+:root{--ink:#16231f;--muted:#66736d;--rule:#dfe5e1;--past:#0f5c52;--past2:#0b4a42;--soft:#e8f2ee;--bg:#f3f6f4;--card:#fff;--err:#c0392b}
+@media(prefers-color-scheme:dark){:root{--ink:#e8efec;--muted:#9aa8a2;--rule:#2b3a35;--past:#3fb59f;--past2:#35a08c;--soft:#1d2b27;--bg:#0e1412;--card:#17201d;--err:#ff7b6b}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);
+font:16px/1.6 system-ui,-apple-system,"Noto Sans TC","PingFang TC",sans-serif;padding:20px}
+.gate{width:100%;max-width:400px;background:var(--card);border:1px solid var(--rule);border-radius:20px;padding:30px 26px 22px;box-shadow:0 10px 40px rgba(15,60,50,.08)}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--past);color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700;margin-bottom:14px}
+h1{margin:0 0 4px;font-size:23px;letter-spacing:.5px}
+.sub{margin:0 0 22px;color:var(--muted);font-size:14px}
+.lbl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
+.fld{width:100%;height:48px;padding:0 14px;font-size:16px;border:1.5px solid var(--rule);border-radius:12px;background:transparent;color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s}
+.fld:focus{border-color:var(--past);box-shadow:0 0 0 3px var(--soft)}
+.sec{margin-bottom:16px}
+.seg{display:flex;background:var(--soft);border-radius:12px;padding:4px;gap:4px;margin:0 0 14px}
+.seg button{flex:1;height:36px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--card);color:var(--past);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.acct .fld{margin-bottom:10px}
+.hide{display:none!important}
+.row{display:flex;justify-content:space-between;align-items:center;margin:2px 0 14px;font-size:13px}
+.lnk{background:none;border:0;padding:0;color:var(--past);font-size:13px;cursor:pointer;text-decoration:none;font-weight:500}
+.lnk:hover{text-decoration:underline}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin:4px 0 16px}
+.chk input{width:18px;height:18px;accent-color:var(--past)}
+#go{width:100%;height:50px;border:0;border-radius:12px;background:var(--past);color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s}
+#go:hover{background:var(--past2)}#go:disabled{opacity:.6;cursor:default}
+.bar{height:4px;border-radius:2px;background:var(--soft);margin-top:14px;overflow:hidden;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--past);transition:width .15s}
+.msg{min-height:20px;margin-top:10px;font-size:14px;color:var(--muted);text-align:center}.err{color:var(--err)}
+.foot{text-align:center;margin-top:6px}
+.note{font-size:12px;color:var(--muted);margin:16px 0 0;border-top:1px solid var(--rule);padding-top:12px;line-height:1.6}
 </style></head><body>
 <main class="gate">
+<div class="logo">醫</div>
 <h1>區段複習台</h1>
-<p>個人學習用的網站。內容已加密，輸入密碼後才會在你的瀏覽器裡解開。</p>
-<form id="f"><input id="pw" type="password" autocomplete="off" placeholder="網站密碼" required>
-<div class="acct"><p style="margin:14px 0 4px"><b>我的帳號</b>（選用：同步星星與答題紀錄，換裝置也在）</p>
-<div class="tabs"><button type="button" id="tl" class="tab on">登入</button><button type="button" id="tr" class="tab">註冊新帳號</button></div>
-<input id="em" type="email" autocomplete="email" placeholder="信箱（不用帳號就留空）">
-<input id="apw" type="password" autocomplete="current-password" placeholder="帳號密碼（註冊時自己設，至少 6 個字元）">
-<button type="button" id="rs" class="small">忘記帳號密碼？寄重設信到上面的信箱</button></div>
-<label><input type="checkbox" id="rem" checked> 記住這台裝置（下次不用再輸入）</label>
-<button id="go">解鎖</button></form>
+<p class="sub">輸入網站密碼解鎖。內容已加密，只會在你的瀏覽器裡解開。</p>
+<form id="f" autocomplete="off">
+<div class="sec"><label class="lbl" for="pw">網站密碼</label>
+<input class="fld" id="pw" type="password" autocomplete="off" placeholder="朋友給你的網站密碼" required></div>
+<div class="acct">
+<label class="lbl">我的帳號<span style="font-weight:400">（同步星星與答題紀錄，換裝置也在）</span></label>
+<div class="seg" id="seg"><button type="button" data-m="login" class="on">登入</button><button type="button" data-m="register">註冊</button><button type="button" data-m="none">先不用</button></div>
+<div id="acf">
+<input class="fld" id="em" type="email" autocomplete="email" placeholder="信箱">
+<input class="fld" id="apw" type="password" autocomplete="current-password" placeholder="帳號密碼（至少 6 個字）">
+<div class="row"><span></span><button type="button" id="rs" class="lnk">忘記帳號密碼？</button></div>
+</div></div>
+<label class="chk"><input type="checkbox" id="rem" checked> 記住這台裝置，下次直接進入</label>
+<button id="go">解鎖</button>
+</form>
+<div class="bar" id="bar"><i id="bari"></i></div>
 <div class="msg" id="msg"></div>
-<button class="small" id="forget" type="button" style="display:none">清除這台裝置的記住狀態</button>
-<p class="note">本站僅供個人學習、複習參考，不作其他用途。題目、圖片與講義內容的著作權屬原出題單位與授課老師；答案與詳解部分為整理或 AI 推論，請以官方公告與課堂內容為準。</p>
+<div class="foot"><button class="lnk hide" id="forget" type="button">清除這台裝置的記住狀態</button></div>
+<p class="note">本站僅供個人學習、複習參考。題目、圖片與講義內容的著作權屬原出題單位與授課老師；答案與詳解部分為整理或 AI 推論，請以官方公告與課堂內容為準。</p>
 </main>
 <script>
 const ITER=600000, SALT=Uint8Array.from(atob("M4twtVuZ5T1bBFJb5NQRYg=="),c=>c.charCodeAt(0));
@@ -51,8 +74,8 @@ async function getBin(key,file){
 }
 async function unlock(key){
   let man; try{ man=JSON.parse(dec.decode(await getBin(key,"m.bin"))); }catch(e){ throw new Error("BADPW"); }
-  const ents=Object.entries(man.files), data={}, q=ents.slice(); let n=0;
-  await Promise.all(Array.from({length:6},async()=>{ while(q.length){ const [p,i]=q.shift(); data[p]=await getBin(key,i.f); msg("解密中… "+(++n)+" / "+ents.length); } }));
+  const ents=Object.entries(man.files), data={}, q=ents.slice(); let n=0; $("bar").style.display="block";
+  await Promise.all(Array.from({length:6},async()=>{ while(q.length){ const [p,i]=q.shift(); data[p]=await getBin(key,i.f); ++n; msg("解密中… "+n+" / "+ents.length); $("bari").style.width=(100*n/ents.length)+"%"; } }));
   const imgUrl={}, imgs=[];
   for(const [p,i] of ents) if(i.t==="img"){ imgUrl[p]=URL.createObjectURL(new Blob([data[p]],{type:i.m})); imgs.push(p); }
   imgs.sort((a,b)=>b.length-a.length);
@@ -67,11 +90,11 @@ async function unlock(key){
 }
 async function tryRemembered(){
   const k=localStorage.getItem("ms_key"); if(!k) return false;
-  $("forget").style.display="inline-block";
+  $("forget").classList.remove("hide");
   try{ msg("自動解鎖中…"); await unlock(await crypto.subtle.importKey("raw",b64d(k),"AES-GCM",false,["decrypt"])); return true; }
-  catch(e){ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("這台裝置記住的金鑰已失效，請重新輸入密碼",true); return false; }
+  catch(e){ localStorage.removeItem("ms_key"); $("forget").classList.add("hide"); msg("這台裝置記住的金鑰已失效，請重新輸入密碼",true); return false; }
 }
-$("forget").onclick=()=>{ localStorage.removeItem("ms_key"); $("forget").style.display="none"; msg("已清除"); };
+$("forget").onclick=()=>{ localStorage.removeItem("ms_key"); $("forget").classList.add("hide"); msg("已清除"); };
 /* 帳號（選用）：用 Firebase REST 登入／註冊，登入資料存在這個網站自己的 localStorage（medstudyAuth），解鎖後網站會自動接手同步 */
 const FBK="AIzaSyAvhAKfpmy5h1Hnk8E9ej-nSvedoA-Ql-U"; let amode="login";
 const ERR={EMAIL_EXISTS:"這個信箱已經註冊過了，請改用「登入」",INVALID_LOGIN_CREDENTIALS:"帳號信箱或帳號密碼不正確",INVALID_PASSWORD:"帳號信箱或帳號密碼不正確",
@@ -80,12 +103,17 @@ const ERR={EMAIL_EXISTS:"這個信箱已經註冊過了，請改用「登入」"
 const fbmsg=m=>{ const k=Object.keys(ERR).find(c=>String(m).includes(c)); return k?ERR[k]:(/Failed to fetch|Network/i.test(m)?"連不上網路，帳號功能需要網路":"帳號錯誤："+m); };
 async function fb(path,body){ const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:"+path+"?key="+FBK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||("HTTP "+r.status)); return j; }
-$("tl").onclick=()=>{ amode="login"; $("tl").className="tab on"; $("tr").className="tab"; };
-$("tr").onclick=()=>{ amode="register"; $("tr").className="tab on"; $("tl").className="tab"; };
+const setMode=m=>{ amode=m; try{localStorage.setItem("ms_mode",m);}catch(e){}
+  document.querySelectorAll("#seg button").forEach(b=>b.className=b.dataset.m===m?"on":"");
+  $("acf").className=m==="none"?"hide":""; $("em").required=m!=="none"; $("apw").required=m!=="none";
+  $("apw").autocomplete=m==="register"?"new-password":"current-password"; $("rs").className="lnk"+(m==="login"?"":" hide"); };
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+setMode(localStorage.getItem("medstudyAuth")?"none":(localStorage.getItem("ms_mode")||"login"));
 $("rs").onclick=async()=>{ const em=$("em").value.trim(); if(!em){ msg("請先在上面填信箱",true); return; }
   try{ await fb("sendOobCode",{requestType:"PASSWORD_RESET",email:em}); msg("已寄出重設密碼的信到 "+em+"（沒看到請查垃圾信件匣）"); }catch(e){ msg(fbmsg(e.message),true); } };
 async function accountLogin(){
-  const em=$("em").value.trim(); if(!em) return;
+  if(amode==="none") return;
+  const em=$("em").value.trim(); if(!em) throw new Error("INVALID_EMAIL");
   const pw=$("apw").value; if(!pw) throw new Error("MISSING_PASSWORD");
   const r=await fb(amode==="register"?"signUp":"signInWithPassword",{email:em,password:pw,returnSecureToken:true});
   localStorage.setItem("medstudyAuth",JSON.stringify({email:em,uid:r.localId,idToken:r.idToken,refreshToken:r.refreshToken,exp:Date.now()+(+r.expiresIn)*1000-60000}));
