@@ -67,26 +67,45 @@ async function deriveKey(pw){
   const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
   return crypto.subtle.deriveKey({name:"PBKDF2",salt:SALT,iterations:ITER,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["decrypt"]);
 }
+/* enc/ 檔名＝密文雜湊，內容不變檔名就不變 → 放進 Cache Storage，之後只需下載 m.bin 與有變動的檔案；m.bin 每次都重新確認 */
 async function getBin(key,file){
-  const r=await fetch(file,{cache:"no-cache"}); if(!r.ok) throw new Error("fetch "+file);
-  const b=new Uint8Array(await r.arrayBuffer());
+  let buf=null;
+  if(file.indexOf("enc/")===0&&window.caches){
+    try{ const c=await caches.open("ms-enc"); let r=await c.match(file);
+      if(!r){ r=await fetch(file); if(!r.ok) throw new Error("fetch "+file); await c.put(file,r.clone()); }
+      buf=await r.arrayBuffer(); }catch(e){ buf=null; }
+  }
+  if(!buf){ const r=await fetch(file,file==="m.bin"?{cache:"no-cache"}:undefined); if(!r.ok) throw new Error("fetch "+file); buf=await r.arrayBuffer(); }
+  const b=new Uint8Array(buf);
   return crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},key,b.slice(12));
 }
 async function unlock(key){
   let man; try{ man=JSON.parse(dec.decode(await getBin(key,"m.bin"))); }catch(e){ throw new Error("BADPW"); }
-  const ents=Object.entries(man.files), data={}, q=ents.slice(); let n=0; $("bar").style.display="block";
-  await Promise.all(Array.from({length:6},async()=>{ while(q.length){ const [p,i]=q.shift(); data[p]=await getBin(key,i.f); ++n; msg("解密中… "+n+" / "+ents.length); $("bari").style.width=(100*n/ents.length)+"%"; } }));
-  const imgUrl={}, imgs=[];
-  for(const [p,i] of ents) if(i.t==="img"){ imgUrl[p]=URL.createObjectURL(new Blob([data[p]],{type:i.m})); imgs.push(p); }
-  imgs.sort((a,b)=>b.length-a.length);
-  const patch=t=>{ for(const p of imgs) t=t.split(p).join(imgUrl[p]); return t; };
+  const all=Object.entries(man.files), ents=all.filter(e=>e[1].t!=="img"), data={}, q=ents.slice(); let n=0; $("bar").style.display="block";
+  /* 圖片不在解鎖時下載：只先解密網頁與題庫資料，圖片等畫面真的要顯示時才抓、才解密（網路差也能先進去） */
+  if(window.caches){ caches.open("ms-enc").then(async c=>{ const keep=new Set(all.map(e=>e[1].f)); for(const r of await c.keys()){ const u=new URL(r.url).pathname; const f=u.slice(u.indexOf("enc/")); if(!keep.has(f)) c.delete(r); } }).catch(()=>{}); }
+  await Promise.all(Array.from({length:8},async()=>{ while(q.length){ const [p,i]=q.shift(); data[p]=await getBin(key,i.f); ++n; msg("解密中… "+n+" / "+ents.length); $("bari").style.width=(100*n/ents.length)+"%"; } }));
+  const imgs=all.filter(e=>e[1].t==="img").map(e=>e[0]).sort((a,b)=>b.length-a.length);
+  const re=imgs.length?new RegExp(imgs.map(p=>p.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|"),"g"):null;
+  const patch=t=>re?t.replace(re,m=>"msimg:"+m):t;      // 圖片路徑改成 msimg: 開頭，載入時立刻失敗、交給下面的 error 攔截去解密
   let html=dec.decode(data["index.html"]);
   html=html.replace(/<script src="([^"]+)"><\/script>/g,(m,s)=>{
     if(!data[s]) return m;
     return '<script src="'+URL.createObjectURL(new Blob([patch(dec.decode(data[s]))],{type:"text/javascript"}))+'"><\/script>';
   });
   html=patch(html);
+  const onImgErr=async ev=>{
+    const el=ev.target; if(!el||el.tagName!=="IMG"||el.dataset.msLoaded) return;
+    const src=el.getAttribute("src")||""; if(src.indexOf("msimg:")!==0) return;
+    el.dataset.msLoaded="1";
+    try{ let p=src.slice(6); if(!man.files[p]){ try{ p=decodeURIComponent(p); }catch(e){} } const i=man.files[p]; if(!i) return;
+      if(!LAZY[p]) LAZY[p]=getBin(key,i.f).then(d=>URL.createObjectURL(new Blob([d],{type:i.m})));
+      el.src=await LAZY[p]; }catch(e){ delete el.dataset.msLoaded; }
+  };
+  const LAZY={};
+  window.addEventListener("error",onImgErr,true);
   document.open(); document.write(html); document.close();
+  window.addEventListener("error",onImgErr,true);
 }
 async function tryRemembered(){
   const k=localStorage.getItem("ms_key"); if(!k) return false;
